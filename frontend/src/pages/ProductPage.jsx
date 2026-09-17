@@ -1,7 +1,9 @@
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react";
 import { useProductStore } from "../store/useProductStore";
 import { useEffect } from "react";
 import { ArrowLeftIcon, SaveIcon, Trash2Icon } from "lucide-react";
+
+const CATEGORIES = ["Electronics", "Fashion", "Home", "Gaming", "Books", "Sports", "Other"];
 
 function ProductPage() {
   const {
@@ -31,7 +33,7 @@ function ProductPage() {
   if (loading) {
     return (
       <div className="flex justify-center items-center min-h-screen">
-        <div className="loading loading-spinner loading-lg" />
+        <div className="loading loading-spinner loading-lg text-primary" />
       </div>
     );
   }
@@ -53,7 +55,7 @@ function ProductPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         {/* PRODUCT IMAGE */}
-        <div className="rounded-lg overflow-hidden shadow-lg bg-base-100">
+        <div className="rounded-2xl overflow-hidden shadow-xl bg-base-100 border border-base-200">
           <img
             src={currentProduct?.image}
             alt={currentProduct?.name}
@@ -62,7 +64,7 @@ function ProductPage() {
         </div>
 
         {/* PRODUCT FORM */}
-        <div className="card bg-base-100 shadow-lg">
+        <div className="card bg-base-100 shadow-xl border border-base-200">
           <div className="card-body">
             <h2 className="card-title text-2xl mb-6">Edit Product</h2>
 
@@ -82,9 +84,27 @@ function ProductPage() {
                   type="text"
                   placeholder="Enter product name"
                   className="input input-bordered w-full"
-                  value={formData.name}
+                  value={formData.name || ""}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 />
+              </div>
+
+              {/* CATEGORY SELECTOR */}
+              <div className="form-control">
+                <label className="label">
+                  <span className="label-text text-base font-medium">Category</span>
+                </label>
+                <select
+                  className="select select-bordered w-full"
+                  value={formData.category || "Electronics"}
+                  onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                >
+                  {CATEGORIES.map((cat) => (
+                    <option key={cat} value={cat}>
+                      {cat}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               {/* PRODUCT PRICE */}
@@ -98,7 +118,7 @@ function ProductPage() {
                   step="0.01"
                   placeholder="0.00"
                   className="input input-bordered w-full"
-                  value={formData.price}
+                  value={formData.price || ""}
                   onChange={(e) => setFormData({ ...formData, price: e.target.value })}
                 />
               </div>
@@ -112,7 +132,7 @@ function ProductPage() {
                   type="text"
                   placeholder="https://example.com/image.jpg"
                   className="input input-bordered w-full"
-                  value={formData.image}
+                  value={formData.image || ""}
                   onChange={(e) => setFormData({ ...formData, image: e.target.value })}
                 />
               </div>

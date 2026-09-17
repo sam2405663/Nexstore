@@ -4,10 +4,14 @@ import morgan from "morgan";
 import cors from "cors";
 import dotenv from "dotenv";
 import path from "path";
-import { neon } from "@neondatabase/serverless";
 
 import productRoutes from "./routes/productRoutes.js";
-import { sql } from "./config/db.js";
+import authRoutes from "./routes/authRoutes.js";
+import orderRoutes from "./routes/orderRoutes.js";
+import adminRoutes from "./routes/adminRoutes.js";
+import shopRoutes from "./routes/shopRoutes.js";
+
+import { connectDB } from "./config/db.js";
 import { aj } from "./lib/arcjet.js";
 
 dotenv.config();
@@ -22,14 +26,14 @@ app.use(
   helmet({
     contentSecurityPolicy: false,
   })
-); // helmet is a security middleware that helps you protect your app by setting various HTTP headers
-app.use(morgan("dev")); // log the requests
+);
+app.use(morgan("dev"));
 
-// apply arcjet rate-limit to all routes
+// Apply arcjet protection middleware
 app.use(async (req, res, next) => {
   try {
     const decision = await aj.protect(req, {
-      requested: 1, // specifies that each request consumes 1 token
+      requested: 1,
     });
 
     if (decision.isDenied()) {
@@ -43,7 +47,6 @@ app.use(async (req, res, next) => {
       return;
     }
 
-    // check for spoofed bots
     if (decision.results.some((result) => result.reason.isBot() && result.reason.isSpoofed())) {
       res.status(403).json({ error: "Spoofed bot detected" });
       return;
@@ -56,37 +59,23 @@ app.use(async (req, res, next) => {
   }
 });
 
+// API Routes
+app.use("/api/auth", authRoutes);
+app.use("/api/shops", shopRoutes);
 app.use("/api/products", productRoutes);
+app.use("/api/orders", orderRoutes);
+app.use("/api/admin", adminRoutes);
 
 if (process.env.NODE_ENV === "production") {
-  // server our react app
   app.use(express.static(path.join(__dirname, "/frontend/dist")));
 
- app.get("/{*splat}", (req, res) => {
-  res.sendFile(path.resolve(__dirname, "frontend", "dist", "index.html"));
-});
+  app.get("/{*splat}", (req, res) => {
+    res.sendFile(path.resolve(__dirname, "frontend", "dist", "index.html"));
+  });
 }
 
-async function initDB() {
-  try {
-    await sql`
-      CREATE TABLE IF NOT EXISTS products (
-        id SERIAL PRIMARY KEY,
-        name VARCHAR(255) NOT NULL,
-        image VARCHAR(255) NOT NULL,
-        price DECIMAL(10, 2) NOT NULL,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      )
-    `;
-
-    console.log("Database initialized successfully");
-  } catch (error) {
-    console.log("Error initDB", error);
-  }
-}
-
-initDB().then(() => {
+connectDB().then(() => {
   app.listen(PORT, () => {
-    console.log("Server is running on port " + PORT);
+    console.log("Server running on port " + PORT + " with MongoDB database");
   });
 });

@@ -1,13 +1,16 @@
-import { sql } from "../config/db.js";
+import Product from "../models/Product.js";
 
 export const getProducts = async (req, res) => {
   try {
-    const products = await sql`
-      SELECT * FROM products
-      ORDER BY created_at DESC
-    `;
+    const filter = {};
+    if (req.query.seller) {
+      filter.seller = req.query.seller;
+    }
 
-    console.log("fetched products", products);
+    const products = await Product.find(filter)
+      .populate("seller", "name shopName shopImage shopDescription")
+      .sort({ createdAt: -1 });
+
     res.status(200).json({ success: true, data: products });
   } catch (error) {
     console.log("Error in getProducts function", error);
@@ -16,20 +19,35 @@ export const getProducts = async (req, res) => {
 };
 
 export const createProduct = async (req, res) => {
-  const { name, price, image } = req.body;
+  if (!req.user || req.user.role !== "seller") {
+    return res.status(403).json({
+      success: false,
+      message: "Only registered Sellers can add products to their shop",
+    });
+  }
+
+  const { name, price, image, category, stock } = req.body;
 
   if (!name || !price || !image) {
     return res.status(400).json({ success: false, message: "All fields are required" });
   }
 
   try {
-    const newProduct = await sql`
-      INSERT INTO products (name,price,image)
-      VALUES (${name},${price},${image})
-      RETURNING *
-    `;
+    const newProduct = await Product.create({
+      name,
+      price: Number(price),
+      image,
+      category: category || "General",
+      stock: stock ? Number(stock) : 10,
+      seller: req.user._id,
+    });
 
-    res.status(201).json({ success: true, data: newProduct[0] });
+    const populatedProduct = await Product.findById(newProduct._id).populate(
+      "seller",
+      "name shopName shopImage"
+    );
+
+    res.status(201).json({ success: true, data: populatedProduct });
   } catch (error) {
     console.log("Error in createProduct function", error);
     res.status(500).json({ success: false, message: "Internal Server Error" });
@@ -40,11 +58,16 @@ export const getProduct = async (req, res) => {
   const { id } = req.params;
 
   try {
-    const product = await sql`
-     SELECT * FROM products WHERE id=${id}
-    `;
+    const product = await Product.findById(id).populate(
+      "seller",
+      "name shopName shopImage shopDescription"
+    );
 
-    res.status(200).json({ success: true, data: product[0] });
+    if (!product) {
+      return res.status(404).json({ success: false, message: "Product not found" });
+    }
+
+    res.status(200).json({ success: true, data: product });
   } catch (error) {
     console.log("Error in getProduct function", error);
     res.status(500).json({ success: false, message: "Internal Server Error" });
@@ -53,24 +76,34 @@ export const getProduct = async (req, res) => {
 
 export const updateProduct = async (req, res) => {
   const { id } = req.params;
-  const { name, price, image } = req.body;
+  const { name, price, image, category, stock } = req.body;
+
+  if (!req.user) {
+    return res.status(401).json({ success: false, message: "Not authorized" });
+  }
 
   try {
-    const updateProduct = await sql`
-      UPDATE products
-      SET name=${name}, price=${price}, image=${image}
-      WHERE id=${id}
-      RETURNING *
-    `;
+    const product = await Product.findById(id);
 
-    if (updateProduct.length === 0) {
-      return res.status(404).json({
+    if (!product) {
+      return res.status(404).json({ success: false, message: "Product not found" });
+    }
+
+    // Strictly check if logged-in user is the seller of this product
+    if (req.user.role !== "seller" || product.seller.toString() !== req.user._id.toString()) {
+      return res.status(403).json({
         success: false,
-        message: "Product not found",
+        message: "Forbidden: You can only edit products belonging to your own shop",
       });
     }
 
-    res.status(200).json({ success: true, data: updateProduct[0] });
+    const updatedProduct = await Product.findByIdAndUpdate(
+      id,
+      { name, price: Number(price), image, category, stock },
+      { new: true, runValidators: true }
+    ).populate("seller", "name shopName shopImage");
+
+    res.status(200).json({ success: true, data: updatedProduct });
   } catch (error) {
     console.log("Error in updateProduct function", error);
     res.status(500).json({ success: false, message: "Internal Server Error" });
@@ -80,19 +113,28 @@ export const updateProduct = async (req, res) => {
 export const deleteProduct = async (req, res) => {
   const { id } = req.params;
 
-  try {
-    const deletedProduct = await sql`
-      DELETE FROM products WHERE id=${id} RETURNING *
-    `;
+  if (!req.user) {
+    return res.status(401).json({ success: false, message: "Not authorized" });
+  }
 
-    if (deletedProduct.length === 0) {
-      return res.status(404).json({
+  try {
+    const product = await Product.findById(id);
+
+    if (!product) {
+      return res.status(404).json({ success: false, message: "Product not found" });
+    }
+
+    // Strictly check if logged-in user is the seller of this product
+    if (req.user.role !== "seller" || product.seller.toString() !== req.user._id.toString()) {
+      return res.status(403).json({
         success: false,
-        message: "Product not found",
+        message: "Forbidden: You can only delete products belonging to your own shop",
       });
     }
 
-    res.status(200).json({ success: true, data: deletedProduct[0] });
+    const deletedProduct = await Product.findByIdAndDelete(id);
+
+    res.status(200).json({ success: true, data: deletedProduct });
   } catch (error) {
     console.log("Error in deleteProduct function", error);
     res.status(500).json({ success: false, message: "Internal Server Error" });

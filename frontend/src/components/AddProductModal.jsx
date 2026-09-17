@@ -1,5 +1,7 @@
-import { DollarSignIcon, ImageIcon, Package2Icon, PlusCircleIcon } from "lucide-react";
+import { DollarSignIcon, ImageIcon, Package2Icon, PlusCircleIcon, TagIcon } from "lucide-react";
 import { useProductStore } from "../store/useProductStore";
+
+const CATEGORIES = ["Electronics", "Fashion", "Home", "Gaming", "Books", "Sports", "Other"];
 
 function AddProductModal() {
   const { addProduct, formData, setFormData, loading } = useProductStore();
@@ -32,7 +34,31 @@ function AddProductModal() {
                   className="input input-bordered w-full pl-10 py-3 focus:input-primary transition-colors duration-200"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  required
                 />
+              </div>
+            </div>
+
+            {/* CATEGORY SELECTOR */}
+            <div className="form-control">
+              <label className="label">
+                <span className="label-text text-base font-medium">Category</span>
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-base-content/50">
+                  <TagIcon className="size-5" />
+                </div>
+                <select
+                  className="select select-bordered w-full pl-10 focus:select-primary"
+                  value={formData.category || "Electronics"}
+                  onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                >
+                  {CATEGORIES.map((cat) => (
+                    <option key={cat} value={cat}>
+                      {cat}
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
 
@@ -53,6 +79,7 @@ function AddProductModal() {
                   className="input input-bordered w-full pl-10 py-3 focus:input-primary transition-colors duration-200"
                   value={formData.price}
                   onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                  required
                 />
               </div>
             </div>
@@ -72,6 +99,7 @@ function AddProductModal() {
                   className="input input-bordered w-full pl-10 py-3 focus:input-primary transition-colors duration-200"
                   value={formData.image}
                   onChange={(e) => setFormData({ ...formData, image: e.target.value })}
+                  required
                 />
               </div>
             </div>
@@ -107,4 +135,5 @@ function AddProductModal() {
     </dialog>
   );
 }
+
 export default AddProductModal;

@@ -2,12 +2,12 @@ import { create } from "zustand";
 import axios from "axios";
 import toast from "react-hot-toast";
 
-// base url will be dynamic depending on the environment
 const BASE_URL = import.meta.env.MODE === "development" ? "http://localhost:3000" : "";
 
 export const useProductStore = create((set, get) => ({
   // products state
   products: [],
+  selectedCategory: "All",
   loading: false,
   error: null,
   currentProduct: null,
@@ -17,10 +17,12 @@ export const useProductStore = create((set, get) => ({
     name: "",
     price: "",
     image: "",
+    category: "Electronics",
   },
 
+  setSelectedCategory: (category) => set({ selectedCategory: category }),
   setFormData: (formData) => set({ formData }),
-  resetForm: () => set({ formData: { name: "", price: "", image: "" } }),
+  resetForm: () => set({ formData: { name: "", price: "", image: "", category: "Electronics" } }),
 
   addProduct: async (e) => {
     e.preventDefault();
@@ -75,7 +77,7 @@ export const useProductStore = create((set, get) => ({
       const response = await axios.get(`${BASE_URL}/api/products/${id}`);
       set({
         currentProduct: response.data.data,
-        formData: response.data.data, // pre-fill form with current product data
+        formData: response.data.data,
         error: null,
       });
     } catch (error) {
@@ -85,6 +87,7 @@ export const useProductStore = create((set, get) => ({
       set({ loading: false });
     }
   },
+
   updateProduct: async (id) => {
     set({ loading: true });
     try {
