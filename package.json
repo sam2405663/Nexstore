@@ -1,12 +1,13 @@
 {
   "name": "nexstore",
   "version": "1.0.0",
-  "description": "",
+  "description": "Multi-Vendor Marketplace with Admin, Seller, and Buyer Roles",
   "main": "backend/server.js",
   "scripts": {
     "dev": "nodemon backend/server.js",
-    "build":"npm install && npm install --prefix frontend && npm run build --prefix frontend",
-    "start":"node backend/server.js"
+    "build": "npm install && npm install --prefix frontend && npm run build --prefix frontend",
+    "start": "node backend/server.js",
+    "seed": "node backend/seeds/products.js"
   },
   "keywords": [],
   "author": "",
